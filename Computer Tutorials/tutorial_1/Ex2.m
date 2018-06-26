@@ -6,14 +6,15 @@
     e = randn(n,1);
     x=rand(n,1);
     y=alpha + x*beta + e;
-    %following line adds intercept to x. explain why
-    x=[ones(n,1), x];
+    %following line adds intercept to x. explain why: the column of ones
+    x=[ones(n,1), x];       % see what e and x look like by using figure; plot(e); plot (x)
     %Following part of the program does OLS estimation
     %the OLS estimator
     bhat = inv(x'*x)*x'*y;
     disp 'The OLS estimator of beta is';
     disp(bhat);
-    %the OLS residuals
+    %the OLS residuals: i.e. the difference between the true data and the
+    %estimation:
     resids = y - x*bhat;
     %The OLS estimator of the error variance
     s2 = resids'*resids/(n-2);

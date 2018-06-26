@@ -54,11 +54,11 @@ vchol=vchol';
 %Now start Monte Carlo loop
 %beta is t(b1,vscale,v1)
 %For illustrative purpose we calculate only for beta(2)
-b2mean=zeros(k,1);
+ b2mean=zeros(k,1);
 b2square=zeros(k,1);
 
 %Specify the number of replications
-s=10000;
+s=100000;
 
 %tdis_rnd takes random draws from the multivariate t
 %with mean zero and scale, V=I

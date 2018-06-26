@@ -1,5 +1,5 @@
     %This is a simple program which illustrates Matlab matrix commands
-    x = [1 2 3; 4 5 6; 7 8 9];
+    x = [1 2 3; 4 5 6; 7 8 9];  
     disp x;
     disp(x);
     y = [11 12 13; 14 15 16; 17 18 19];
@@ -29,3 +29,7 @@
     e=x(2,3);
     disp e
     disp(e);
+    f = x';
+    disp f;
+    disp(f);
+    
