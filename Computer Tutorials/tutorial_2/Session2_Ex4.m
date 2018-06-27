@@ -2,6 +2,9 @@
 %Univariate AR(p) model based on Geweke (1988) who uses an AR(3)
 %The definitions of the features of interest relating to secular/cyclical behavior
 %are defined for the AR(3) so always set p=3
+
+clear all, clc
+
 load realgdp.out;
 rawdat=realgdp;
 traw=size(rawdat,1);

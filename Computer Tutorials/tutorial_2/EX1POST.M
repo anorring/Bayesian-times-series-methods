@@ -1,7 +1,8 @@
 %For a given data set and values for prior hyperparameters
 %Calculate OLS and posterior quantities, marginal likelihood
 %and predictive (Predictive sets x-star=.5
-% See slides 27->
+%
+% See lecture slides 27 -->
 
 %Ordinary least squares quantities
 bols = inv(x'*x)*x'*y;

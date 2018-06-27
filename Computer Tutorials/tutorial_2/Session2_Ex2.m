@@ -28,12 +28,15 @@ bols = inv(x'*x)*x'*y;
 s2 = (y-x*bols)'*(y-x*bols)/(n-k);
 v=n-k;
 
-%Posterior hyperparameters for Normal-Gamma
+% -----------------------------
+
+%Posterior hyperparameters for Normal-Gamma (what we did in Ex 1)
 xsquare=x'*x;
 v1=v0+n;
 capv1inv = capv0inv+ xsquare;
 capv1=inv(capv1inv);
 b1 = capv1*(capv0inv*b0 + xsquare*bols);
+
 if det(capv0inv)>0
     v1s12 = v0*s02 + v*s2 + (bols-b0)'*inv(capv0 + inv(xsquare))*(bols-b0);
 else
@@ -54,11 +57,11 @@ vchol=vchol';
 %Now start Monte Carlo loop
 %beta is t(b1,vscale,v1)
 %For illustrative purpose we calculate only for beta(2)
- b2mean=zeros(k,1);
+b2mean=zeros(k,1);
 b2square=zeros(k,1);
 
-%Specify the number of replications
-s=100000;
+%Specify the number of replications:
+s=10000; % the monte carlo estimation is asymptotically the same as the analytical result
 
 %tdis_rnd takes random draws from the multivariate t
 %with mean zero and scale, V=I
@@ -67,7 +70,7 @@ for i = 1:s
     %draw a t(v1) then transform to yield draw of beta
     
     
-    bdraw=b1 + vchol*trnd(v1,k,1);
+    bdraw=b1 + vchol*trnd(v1,k,1);   % trnd
     b2mean=b2mean+bdraw;  
     b2square=b2square+bdraw.^2; 
 end

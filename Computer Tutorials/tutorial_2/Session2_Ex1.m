@@ -1,7 +1,6 @@
 %program which does Computer tutorial 2, Exercise 1
 %Normal linear regression model with natural conjugate prior (analytical)
 %load in the data set. Here use house price data from hprice.txt
-clear, clc
 load hprice.txt;
 n=size(hprice,1);
 y=hprice(:,1);
@@ -17,7 +16,7 @@ b0(3,1)=5000;
 b0(4,1)=10000;
 b0(5,1)=10000;
 s02=1/4.0e-8;
-capv0=2.4*eye(k);  % a diagonal matrix
+capv0=2.4*eye(k);
 capv0(2,2)=6e-7;
 capv0(3,3)=.15;
 capv0(4,4)=.6;
@@ -44,7 +43,7 @@ bsd
 
 %Hyperparameters for noninformative prior
 v0=0;
-capv0inv=0*eye(k);
+capv0inv=0*eye(k); % diagonal matrix, is this right? Or should the 
 
 
 %Call script which carries actually does posterior analysis

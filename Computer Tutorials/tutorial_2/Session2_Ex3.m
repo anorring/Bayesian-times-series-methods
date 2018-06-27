@@ -54,14 +54,14 @@ s1=10000;
 s=s0+s1;
 
 %choose a starting value for h
-hdraw=1/s2;
+hdraw=1/s2;  % initial guess
 
 for i = 1:s
     %draw from beta conditional on h
     capv1inv = capv0inv+ hdraw*xsquare;
     capv1=inv(capv1inv);
     b1 = capv1*(capv0inv*b0 + hdraw*xsquare*bols);
-    bdraw=b1 + norm_rnd(capv1);
+    bdraw=b1 + norm_rnd(capv1); % norm_rnd from proffs website
      
     %draw from h conditional on beta
     s12 = ((y-x*bdraw)'*(y-x*bdraw)+v0s02)/v1;
