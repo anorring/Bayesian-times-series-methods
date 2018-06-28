@@ -1,0 +1,567 @@
+%2multibyte Version: 5.50.0.2960 CodePage: 1252
+
+\documentclass{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsmath}
+
+\setcounter{MaxMatrixCols}{10}
+%TCIDATA{OutputFilter=LATEX.DLL}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{Codepage=1252}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=Manual}
+%TCIDATA{Created=Tuesday, June 13, 2017 09:19:44}
+%TCIDATA{LastRevised=Saturday, May 19, 2018 10:12:09}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{<META NAME="DocumentShell" CONTENT="Standard LaTeX\Blank - Standard LaTeX Article">}
+%TCIDATA{Language=American English}
+%TCIDATA{CSTFile=40 LaTeX article.cst}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+\input{tcilatex}
+\begin{document}
+
+
+\begin{center}
+\textbf{Computer Tutorial 3: TVP-VARs and Multivariate Stochastic Volatility
+in VARs}
+\end{center}
+
+In this exercise sheet, I\ provide a series of questions and answers for a
+question about the TVP-VAR and one about the VAR\ with stochastic
+volatility. Given that I\ am providing the answers, what do I expect you to
+do in the computer sessions?\ First I\ am not expecting you to go through
+the theoretical derivations and proofs (part a of both questions). However,
+since I\ do not have time to do proofs in the lectures, I\ felt I\ should
+make them available to you in case you want to see them or have them as a
+resource for your future Bayesian research. So I\ suggest you do only a
+quick reading of this exercise sheet (without worrying about the details of
+the proofs) before the computer tutorial to get an overview of the model
+each exercise relates to. Instead focus on the computational part of the
+each exercise (part b of the two exercises). Code which does these exercises
+is provided. In the computer lab, I suggest you experiment with these codes
+(e.g. try different priors, lag lengths, etc.)\ to familiarize yourself with
+Bayesian programming in VARs.
+
+Some of the notation I\ use in this exercise sheet is different than that
+used in the lecture.
+
+\newpage 
+
+\textbf{Exercise 1 (The Time Varying Parameter VAR)}
+
+In many macroeconomic applications, the inter-relationships between
+variables changes over time implying that the VAR\ coefficients should
+change. The Time-Varying Parameter VAR\ (TVP-VAR) is a popular model in such
+cases.
+
+Consider again the VAR($p$) but now with time-varying parameters: 
+\begin{equation}
+y_{t}=a_{t}+A_{1t}y_{t-1}+\cdots +A_{pt}y_{t-p}+\epsilon _{t},
+\label{VAR-TVP-y}
+\end{equation}%
+where $\epsilon _{t}\sim N(0,\Sigma )$. Define $X_{t}=I_{n}\otimes \lbrack
+1,y_{t-1}^{\prime },\ldots ,y_{t-p}^{\prime }]$ and $\beta _{t}=\text{vec}%
+([a_{t},\,A_{1t},\,\ldots ,\,A_{pt}]^{\prime })$ and rewrite the above
+system as 
+\begin{equation*}
+y_{t}=X_{t}\beta _{t}+\epsilon _{t}.
+\end{equation*}%
+The time-varying parameters $\beta _{t}$ are assumed to evolve as a random
+walk 
+\begin{equation}
+\beta _{t}=\beta _{t-1}+u_{t},  \label{VAR-TVP-beta}
+\end{equation}%
+where $u_{t}\sim N(0,Q)$ and the initial conditions $\beta _{0}$ are treated
+as parameters. In this question, make the simplifying assumption that the
+covariance matrix $Q$ is diagonal, i.e., $Q=\text{diag}(q_{1},\ldots
+,q_{kn}) $ where $k=np+1$ is the number of explanatory variables in each
+equation of the TVP-VAR. One can also consider the possibility of a
+block-diagonal matrix or even a full matrix, but the form of the Gibbs
+sampler will change slightly. Note that the TVP-VAR\ is a state space model
+with measurement equation (\ref{VAR-TVP-y}) and state equation (\ref%
+{VAR-TVP-beta}).
+
+To complete the model specification, consider independent priors for $\Sigma 
+$, $\beta _{0}$ and the diagonal elements of $Q$: 
+\begin{equation*}
+\Sigma \sim IW(\nu _{0},S_{0}),\quad \beta _{0}\sim N(a_{0},B_{0}),\quad
+q_{i}\sim IG(\nu _{0,q_{i}},S_{0,q_{i}}).
+\end{equation*}
+
+(a)\ Derive a Gibbs sampler which allows for posterior inference in the
+TVP-VAR.
+
+(b) Use the data set provided. Estimate a TVP-VAR\ using this data set.
+Carry out an impulse response analysis and discuss whether impulse responses
+have changed over time.
+
+\textbf{Solution 1}
+
+(a)\ The parameters in the TVP-VAR are $\beta _{0}$, $\Sigma $ and $Q$, and
+the states are $\beta =(\beta _{1}^{\prime },\ldots ,\beta _{T}^{\prime
+})^{\prime }$ and we derive a Gibbs sampler involving these four blocks.
+
+First, we derive the posterior for $\beta $, conditional on the other
+parameters. Re-write (\ref{VAR-TVP-y}) as 
+\begin{equation*}
+y=X\beta +\epsilon ,
+\end{equation*}%
+where $\epsilon \sim {\mathcal{N}}(0,I_{T}\otimes \Sigma )$ and 
+\begin{equation*}
+X=%
+\begin{pmatrix}
+X_{1} & 0 & \cdots & 0 \\ 
+0 & X_{2} & \cdots & 0 \\ 
+\vdots & \vdots & \ddots & \vdots \\ 
+0 & 0 & \cdots & X_{T}%
+\end{pmatrix}%
+.
+\end{equation*}%
+Hence, we have 
+\begin{equation*}
+(y\,|\,\beta ,\Sigma )\sim N(X\beta ,I_{T}\otimes \Sigma ).
+\end{equation*}%
+So we have re-framed the TVP-VAR as a Normal linear regression model. Next,
+we derive the prior of $\beta $. To that end, rewrite (\ref{VAR-TVP-beta})
+in matrix notation: 
+\begin{equation*}
+H\beta =\tilde{\alpha}_{\boldsymbol{\beta }}+u,
+\end{equation*}%
+where $u\sim N(0,I_{T}\otimes Q)$, $\tilde{\alpha}_{\beta }=(\beta
+_{0}^{\prime },0,\ldots ,0)^{\prime }$ and 
+\begin{equation*}
+H=%
+\begin{pmatrix}
+I_{nk} & 0 & 0 & \cdots & 0 \\ 
+-I_{nk} & I_{nk} & 0 & \cdots & 0 \\ 
+0 & -I_{nk} & I_{nk} & \cdots & 0 \\ 
+\vdots &  & \ddots & \ddots & \vdots \\ 
+0 & 0 & \cdots & -I_{nk} & I_{nk}%
+\end{pmatrix}%
+.
+\end{equation*}%
+Note that $H$ is of dimension $Tnk\times Tnk$, and is a multivariate
+generalization of the usual first difference matrix and that $|H|=1$, and is
+therefore invertible. It can be shown that $H^{-1}\tilde{\alpha}_{\beta
+}=1_{T}\otimes \beta _{0}$. Therefore, the prior of $\beta $ is given by 
+\begin{equation*}
+(\beta \,|\,\beta _{0},Q)\sim N(1_{T}\otimes \beta _{0},(H^{\prime
+}(I_{T}\otimes Q^{-1})H)^{-1}).
+\end{equation*}
+
+Thus, the TVP-VAR can also be seen as a multivariate regression with a
+Normal prior and standard multivariate regression can be used to derive: 
+\begin{equation*}
+(\beta \,|\,y,\Sigma ,\beta _{0},Q)\sim {\mathcal{N}}(\hat{\beta},K_{%
+\boldsymbol{\beta }}^{-1}),
+\end{equation*}%
+where 
+\begin{align*}
+K_{\beta }& =H^{\prime }(I_{T}\otimes Q^{-1})H+X^{\prime }(I_{T}\otimes
+\Sigma ^{-1})X, \\
+\hat{\beta}& =K_{\beta }^{-1}\left( H^{\prime }(I_{T}\otimes
+Q^{-1})H(1_{T}\otimes \beta _{0})+X^{\prime }(I_{T}\otimes \Sigma
+^{-1})y\right) .
+\end{align*}
+
+The conditional posterior for $\Sigma $ can be derived using a similar
+derivation as for the VAR\ questions of Computer Session 1. That is,
+conditional on $\beta $, the TVP-VAR\ has the same structure as a VAR\ with
+known coefficients and it can be shown that 
+\begin{equation*}
+(\Sigma \,|\,y,\beta ,Q)\sim {\mathcal{I}W}\left( \nu
+_{0}+T,S_{0}+\sum_{t=1}^{T}(y_{t}-X_{t}\beta _{t})(y_{t}-X_{t}\beta
+_{t})^{\prime }\right) .
+\end{equation*}
+
+In a similar vein, conditional on $\beta $, the state equations have the
+same structure as regressions with the diagonal elements of $Q$=$\text{diag}%
+(q_{1},\ldots ,q_{nk})$ having the same role as error variances. Thus, it
+can be seen that: 
+\begin{equation*}
+(q_{i}\,|\,y,\beta ,\beta _{0})\sim IG\left( \nu _{0,q_{i}}+\frac{T}{2}%
+,S_{0,q_{i}}+\frac{1}{2}\sum_{t=1}^{T}(\beta _{it}-\beta
+_{i(t-1)})^{2}\right) .
+\end{equation*}%
+Finally, since $\beta _{0}$ only appears in the first state equation 
+\begin{equation*}
+\beta _{1}=\beta _{0}+u_{1},
+\end{equation*}%
+where $u_{1}\sim N(0,Q)$. Given the Normal prior $\beta _{0}\sim
+N(a_{0},B_{0})$, we can use standard linear regression results to get 
+\begin{equation*}
+(\beta _{0}\,|\,y,\beta ,Q)\sim {\mathcal{N}}(\hat{\beta}_{0},K_{\boldsymbol{%
+\beta }_{0}}^{-1}),
+\end{equation*}%
+where 
+\begin{equation*}
+K_{\boldsymbol{\beta }_{0}}=B_{0}^{-1}+Q^{-1},\quad \hat{\beta}_{0}=K_{%
+\boldsymbol{\beta }_{0}}^{-1}\left( B_{0}^{-1}a_{0}+Q^{-1}\beta _{1}\right) .
+\end{equation*}
+
+We summarize the Gibbs sampler as follows:
+
+\begin{algorithm}
+\textrm{\textbf{(Gibbs Sampler for the TVP-VAR($p$)).} }
+
+\textrm{Pick some initial values for} $\beta ^{(0)}$, $\Sigma ^{(0)}$, $%
+Q^{(0)}$ and $\beta _{0}^{(0)}$. Th\textrm{en, repeat the following steps
+from $r=1$ to $R$: }
+
+\begin{enumerate}
+\item \ Draw $\beta ^{(r)}\sim (\beta \,|\,y,\Sigma ^{(r-1)},Q^{(r-1)},\beta
+_{0}^{(r-1)})$ (multivariate Normal).
+
+\item Draw $\Sigma ^{(r)}\sim (\Sigma \,|\,y,\beta ^{(r)},Q^{(r-1)},\beta
+_{0}^{(r-1)})$ (inverse-Wishart).
+
+\item Draw $Q^{(r)}\sim (Q\,|\,y,\beta ^{(r)},\Sigma ^{(r)},\beta
+_{0}^{(r-1)})$ (independent inverse-gammas).
+
+\item Draw $\beta _{0}^{(r)}\sim (\beta _{0}\,|\,y,\beta ^{(r)},\Sigma
+^{(r)},Q^{(r)})$ (multivariate Normal)\textrm{. }
+\end{enumerate}
+\end{algorithm}
+
+(b) In the empirical example in Computer Session 1, we estimated a
+3-variable VAR(2) of inflation, unemployment and the interest rate and used
+it to compute impulse response functions to a 100-basis-point monetary
+policy shock. Given the sample covers a long period, one might wonder if the
+responses to the monetary policy shocks were different early in the sample
+from later in the sample. To address this question, we revisit this example
+using a TVP-VAR. In particular, we compare the impulse responses associated
+with the VAR coefficients in 1975 to those in 2005. We use the same data
+set, lag length and scheme to identify the monetary policy shock with the
+TVP-VAR as we did in Computer Session 1.
+
+MATLAB script VAR\_TVP.m implements the Gibbs sampler derived in the
+solution to part a). The MATLAB\ script construct\_IR.m calculates the
+impulse responses.
+
+Figure 1 reports two sets of impulse response functions to a 100-basis-point
+monetary policy shock. The first set is computed using the VAR coefficients
+at 1975Q1; the second set uses those at 2005Q1. As the figure shows, the
+impulse-response functions of both inflation and the interest rate are very
+similar across the two time periods, whereas those of the unemployment seem
+to be more different.
+
+\FRAME{itbpFU}{5.604in}{2.1136in}{0in}{\Qcb{Figure 1:\ Impulse-response
+functions of inflation (left panel), unemployment (middle panel) and
+interest rate (right panel) to a 100-basis-point monetary policy shock for
+1975Q1 and 2005Q1}}{}{var_tvp_ir.eps}{\special{language "Scientific
+Word";type "GRAPHIC";maintain-aspect-ratio TRUE;display "USEDEF";valid_file
+"F";width 5.604in;height 2.1136in;depth 0in;original-width
+8.323in;original-height 3.1125in;cropleft "0";croptop "1";cropright
+"1";cropbottom "0";filename 'VAR_TVP_IR.eps';file-properties "XNPEU";}}
+
+We report in Figure 2 the mean differences between the two sets of
+impulse-response functions of the three variables, as well as the associated
+90\% credible intervals. Despite some large absolute differences, parameter
+uncertainty is high and most of the credible intervals contain zero. There
+seems to be some evidence that the responses of unemployment are different
+across the two periods, but the evidence is not conclusive.
+
+\FRAME{itbpFU}{5.604in}{2.1136in}{0in}{\Qcb{Figure 2:\ Differences between
+the impulse-response functions of inflation (left panel), unemployment
+(middle panel) and interest rate (right panel) at 2005Q1 and 1975Q1. The
+dotted lines are the 5\% and 95\% quantiles}}{}{var_tvp_diff.eps}{\special%
+{language "Scientific Word";type "GRAPHIC";maintain-aspect-ratio
+TRUE;display "USEDEF";valid_file "F";width 5.604in;height 2.1136in;depth
+0in;original-width 8.323in;original-height 3.1125in;cropleft "0";croptop
+"1";cropright "1";cropbottom "0";filename 'VAR_TVP_diff.eps';file-properties
+"XNPEU";}}
+
+\newpage
+
+\textbf{Exercise 2 (The VAR with Stochastic Volatility)}
+
+This exercise shows how one can extend the standard VAR with homoscedastic
+errors to produce a VAR with stochastic volatility (VAR-SV). We start with
+the constant-coefficient VAR of Computer Session 1. However, we extend it by
+allowing the errors to have a time-varying covariance matrix $\Sigma _{t}$: 
+\begin{equation}
+y_{t}=X_{t}\beta +\epsilon _{t},\quad \epsilon _{t}\sim N(0,\Sigma _{t}).
+\label{VAR-SV-y}
+\end{equation}%
+We want $\Sigma _{t}$ to evolve smoothly, while at each time period $\Sigma
+_{t}$ must be a valid covariance matrix---i.e., it is symmetric and positive
+definite. There are a few approaches to model such an evolution, and here we
+follow the approach in the seminal paper by Cogley and Sargent (2005). They
+model $\Sigma _{t}$ as 
+\begin{equation*}
+\Sigma _{t}^{-1}=L^{\prime }D_{t}^{-1}L,
+\end{equation*}%
+where $D_{t}$ is a diagonal matrix and $L$ is a lower triangular matrix with
+ones on the main diagonal, i.e., 
+\begin{equation*}
+D_{t}=%
+\begin{pmatrix}
+\text{e}^{h_{1t}} & 0 & \cdots  & 0 \\ 
+0 & \text{e}^{h_{2t}} & \cdots  & 0 \\ 
+\vdots  & \vdots  & \ddots  & \vdots  \\ 
+0 & 0 & \cdots  & \text{e}^{h_{nt}}%
+\end{pmatrix}%
+,\quad L=%
+\begin{pmatrix}
+1 & 0 & 0 & \cdots  & 0 \\ 
+a_{21} & 1 & 0 & \cdots  & 0 \\ 
+a_{31} & a_{32} & 1 & \cdots  & \vdots  \\ 
+\vdots  & \vdots  & \vdots  & \ddots  & \vdots  \\ 
+a_{n1} & a_{n2} & \cdots  & a_{n(n-1)} & 1%
+\end{pmatrix}%
+.
+\end{equation*}%
+By construction $\Sigma _{t}$ is symmetric and positive definite for any
+values of $h_{t}=(h_{1t},\ldots ,h_{nt})^{\prime }$ and $%
+a=(a_{21},a_{31},a_{32},\ldots ,a_{n1},\ldots ,a_{n(n-1)})^{\prime }$. Note
+that the dimension of $a$ is $m=n(n-1)/2$. Then, each $h_{it}$ is specified
+independently using a univariate stochastic volatility model. More
+precisely, each $h_{it}$ evolves according to the following random walk 
+\begin{equation*}
+h_{it}=h_{i(t-1)}+u_{it}^{h},
+\end{equation*}%
+where $u_{it}^{h}\sim {\mathcal{N}}(0,\sigma _{h,i}^{2})$ and $h_{i0}$ is
+treated as an unknown parameter.
+
+It is worth noting that the parameters in $a$ are restricted to be constant
+here. Primiceri (2005) considers an extension where these parameters are
+time-varying and modeled as random walks (i.e. both $a$ and $\beta $ are
+time varying). The Gibbs sampler for Primiceri's model requires extra blocks
+relative to the Gibbs sampler derived in this exercise. These can be
+obtained using standard results for the Normal linear state space model.
+
+By construction, $\Sigma _{t}=L^{-1}D_{t}(L^{-1})^{\prime }$, and therefore
+we can express each element of $\Sigma _{t}$ in terms of the elements of $%
+D_{t}$ and $L^{-1}=(a^{ij})$. More precisely, we have 
+\begin{align*}
+\sigma _{ii,t}& =\text{e}^{h_{it}}+\sum_{k=1}^{i-1}\text{e}%
+^{h_{kt}}(a^{ik})^{2},\;\;i=1,\ldots ,n, \\
+\sigma _{ij,t}& =a^{ij}\text{e}^{h_{jt}}+\sum_{k=1}^{j-1}a^{ik}a^{jk}\text{e}%
+^{h_{kt}},\;\;1\leq j<i\leq n,
+\end{align*}%
+where $\sigma _{ij,t}$ is the $(i,j)$ element of $\Sigma _{t}$. Note that
+the log-volatility $h_{1t}$ affects the variances of all the variables,
+whereas $h_{nt}$ impacts only the last variable.
+
+In addition, despite the assumption of a constant matrix $L$, this setup
+also allows for some form of time-varying correlations among the errors.
+This can be seen via a simple example. Using the formulas above, we have 
+\begin{equation*}
+\sigma _{11,t}=\text{e}^{h_{1t}},\quad \sigma _{22,t}=\text{e}^{h_{2t}}+%
+\text{e}^{h_{1t}}(a^{21})^{2},\quad \sigma _{12,t}=a^{21}\text{e}^{h_{1t}}.
+\end{equation*}%
+We have used the fact that $L^{-1}$ is a lower triangular matrix with ones
+on the main diagonal, and therefore $a^{11}=1$ and $a^{12}=0$. Now, the
+(1,2) correlation coefficient is given by 
+\begin{equation*}
+\frac{\sigma _{12,t}}{\sqrt{\sigma _{11,t}\sigma _{22,t}}}=\frac{a^{21}}{%
+\sqrt{\text{e}^{h_{2t}-h_{1t}}+(a^{21})^{2}}}.
+\end{equation*}%
+Hence, as long as $h_{1t}$ and $h_{2t}$ are not identical for all $t$, this
+correlation coefficient is time-varying.
+
+To complete the model specification, use independent priors for $\beta $, $a$%
+, $\sigma _{h}^{2}=(\sigma _{h,1}^{2},\ldots ,\sigma _{h,n}^{2})^{\prime }$
+and $h_{0}=(h_{10},\ldots ,h_{n0})^{\prime }$: 
+\begin{equation*}
+\beta \sim N(\beta _{0},V_{\beta }),\quad a\sim N(a_{0},V_{a}),\quad \sigma
+_{h,i}^{2}\sim IG(\nu _{0,h_{i}},S_{0,h_{i}}),\quad h_{0}\sim N(b_{0},B_{0}).
+\end{equation*}
+
+(a)\ Derive an MCMC\ algorithm which allows for posterior inference in this
+VAR-SV.
+
+(b) Estimate the VAR-SV using the data set of Computer Session 1 but
+extended to 2013Q4 so as to investigate whether the Great Recession involved
+changes in volatilities (this is US\_macrodata1.csv on the book's website).
+Plot the volatilities and discuss your results.
+
+\textbf{Solution 2}
+
+(a)\ To estimate the VAR-SV model, we derive a Gibbs sampler that combines
+standard Bayesian VAR\ methods (see Exercise 21.1)\ which methods for
+drawing the stochastic volatilities. Remember that stochastic volatility
+models are state space models and the auxiliary mixture sampler discussed in
+the lecture allows for Bayesian estimation of univariate stochastic
+volatility processes.
+
+The model parameters are $\beta $, $a$, $\sigma _{h,i}^{2}$ and $h_{0,i}$,
+and the states are the log-volatilities $h_{i,1:T}=(h_{i1},\ldots
+,h_{iT})^{\prime }$ for $i=1,..,n.$ We derive a 5-block Gibbs sampler
+involving each of these. The two non-standard steps are sampling of $a$ and $%
+h=(h_{1,1:T}^{\prime },\ldots ,h_{n,1:T}^{\prime })^{\prime }$, and we will
+describe them in detail below.
+
+We begin with the sampling of $a$, the lower triangular elements of $L$.
+First observe that given $y$ and $\beta $, $\epsilon =y-X\beta $ is known.
+Thus, we can rewrite the model as a system of regressions in which $\epsilon
+_{it}$ is regressed on $\epsilon _{1t},\ldots ,\epsilon _{(i-1)t}$ for $%
+i=2,\ldots ,n$, and $a_{i1},\ldots ,a_{i(i-1)}$ are the corresponding
+regression coefficients. If we can rewrite the model this way, then we can
+apply standard linear regression results to sample $a$.
+
+To be precise, note that 
+\begin{align*}
+L\epsilon _{t}& =%
+\begin{pmatrix}
+1 & 0 & 0 & \cdots & 0 \\ 
+a_{21} & 1 & 0 & \cdots & 0 \\ 
+a_{31} & a_{32} & 1 & \cdots & \vdots \\ 
+\vdots & \vdots &  & \ddots & \vdots \\ 
+a_{n1} & a_{n2} & a_{n3} & \cdots & 1%
+\end{pmatrix}%
+\begin{pmatrix}
+\epsilon _{1t} \\ 
+\epsilon _{2t} \\ 
+\epsilon _{3t} \\ 
+\vdots \\ 
+\epsilon _{nt}%
+\end{pmatrix}%
+=%
+\begin{pmatrix}
+\epsilon _{1t} \\ 
+\epsilon _{2t}+a_{21}\epsilon _{1t} \\ 
+\epsilon _{3t}+a_{31}\epsilon _{1t}+a_{32}\epsilon _{2t} \\ 
+\vdots \\ 
+\epsilon _{nt}+\sum_{j=1}^{n-1}a_{nj}\epsilon _{jt}%
+\end{pmatrix}
+\\
+& =%
+\begin{pmatrix}
+\epsilon _{1t} \\ 
+\epsilon _{2t} \\ 
+\epsilon _{3t} \\ 
+\vdots \\ 
+\epsilon _{nt}%
+\end{pmatrix}%
+-%
+\begin{pmatrix}
+0 & 0 & 0 & 0 & 0 & \cdots & \cdots & 0 \\ 
+-\epsilon _{1t} & 0 & 0 & 0 & 0 & \cdots &  & \vdots \\ 
+0 & -\epsilon _{1t} & -\epsilon _{2t} & 0 & 0 & \cdots &  & 0 \\ 
+\vdots &  &  & \ddots & \ddots &  & \cdots & 0 \\ 
+0 & \cdots & 0 & \cdots & 0 & -\epsilon _{1t} & \cdots & -\epsilon _{t(n-1)}%
+\end{pmatrix}%
+\begin{pmatrix}
+a_{21} \\ 
+a_{31} \\ 
+a_{32} \\ 
+\vdots \\ 
+a_{n(n-1)}%
+\end{pmatrix}%
+\end{align*}%
+Or more succinctly, 
+\begin{equation*}
+L\epsilon _{t}=\epsilon _{t}-E_{t}a.
+\end{equation*}%
+Noting that $|\Sigma _{t}|=|D_{t}|$, we can rewrite the likelihood implied
+by (\ref{VAR-SV-y}) as 
+\begin{align*}
+p(y\,|\,\beta ,a,h)& \propto \left( \prod_{t=1}^{T}|D_{t}|^{-\frac{1}{2}%
+}\right) \exp \left( -\frac{1}{2}\sum_{t=1}^{T}\epsilon _{t}^{\prime
+}(L^{\prime }D_{t}^{-1}L)\epsilon _{t}\right) \\
+& =\left( \prod_{t=1}^{T}|D_{t}|^{-\frac{1}{2}}\right) \exp \left( -\frac{1}{%
+2}\sum_{t=1}^{T}(L\epsilon _{t})^{\prime }D_{t}^{-1}(L\epsilon _{t})\right)
+\\
+& =\left( \prod_{t=1}^{T}|D_{t}|^{-\frac{1}{2}}\right) \exp \left( -\frac{1}{%
+2}\sum_{t=1}^{T}(\epsilon _{t}-E_{t}a)^{\prime }D_{t}^{-1}(\epsilon
+_{t}-E_{t}a)\right) .
+\end{align*}%
+In other words, the likelihood is the same as that implied by the regression 
+\begin{equation}
+\epsilon _{t}=E_{t}a+\eta _{t},  \label{eq:VAR-SV-e}
+\end{equation}%
+where $\eta _{t}\sim N(0,D_{t}).$ Therefore, stacking \eqref{eq:VAR-SV-e}
+over $t=1,\ldots ,T$, we have 
+\begin{equation*}
+\epsilon =Ea+\eta ,
+\end{equation*}%
+where $\eta \sim N(0,D)$ with $D=\text{diag}(D_{1},\ldots ,D_{T})$. Given
+the prior $a\sim N(a_{0},V_{a})$, it then follows that 
+\begin{equation*}
+(a\,|\,y,\beta ,h)\sim N(\hat{a},K_{a}^{-1}),
+\end{equation*}%
+where 
+\begin{equation*}
+K_{a}=V_{a}^{-1}+E^{\prime }D^{-1}E,\quad \hat{a}=K_{a}^{-1}\left(
+V_{a}^{-1}a_{0}+E^{\prime }D^{-1}\epsilon \right) .
+\end{equation*}
+
+To sample the log-volatility $h$, we first compute the orthogonalized
+innovations: $\tilde{\epsilon}_{t}=L(y_{t}-X_{t}\beta )$ for $t=1,\ldots ,T$%
+. It can be seen that $E(\tilde{\epsilon}_{t}\,|\,a,h,\beta )=0$ and 
+\begin{equation*}
+cov(\tilde{\epsilon}_{t}\,|\,a,h,\beta )=L(LD_{t}^{-1}L)^{-1}L^{\prime
+}=D_{t}.
+\end{equation*}%
+Hence, $(\tilde{\epsilon}_{it}\,|\,a,h,\beta )\sim N(0,\text{e}^{h_{it}}).$
+Therefore, we can apply the auxiliary mixture sampler described in the
+lecture to each of the series $\tilde{\epsilon}_{i1},\ldots ,\tilde{\epsilon}%
+_{iT}$ for $i=1,\ldots ,n$. The Gibbs sampler steps for $\sigma _{h,i}^{2}$
+and $h_{0,i}$ for $i=1,..,n$ are standard and will not be repeated here.
+
+To sample $\beta $, we rewrite (\ref{VAR-SV-y}) as 
+\begin{equation*}
+y=X\beta +\epsilon ,
+\end{equation*}%
+where $\epsilon \sim N(0,\tilde{\Sigma })$ and $\tilde{\Sigma }=\text{diag}%
+(\Sigma _{1},\ldots ,\Sigma _{T})$ is a block-diagonal matrix. Together with
+the prior $\beta \sim N(\beta _{0},V_{\boldsymbol{\beta }})$, we have 
+\begin{equation*}
+(\beta \,|\,y,a,h)\sim {\mathcal{N}}(\hat{\beta },K_{\boldsymbol{\beta }%
+}^{-1}),
+\end{equation*}%
+where 
+\begin{equation*}
+K_{\boldsymbol{\beta }}=V_{\boldsymbol{\beta }}^{-1}+X^{\prime }\tilde{%
+\Sigma }^{-1}X,\quad \hat{\beta }=K_{\boldsymbol{\beta }}^{-1}\left( V_{%
+\boldsymbol{\beta }}^{-1}\beta _{0}+X^{\prime }\tilde{\Sigma }^{-1}y\right) .
+\end{equation*}%
+Note that $\tilde{\Sigma }^{-1}=\text{diag}(\Sigma _{1}^{-1},\ldots ,\Sigma
+_{T}^{-1})$ with $\Sigma _{t}^{-1}=L^{\prime }D_{t}^{-1}L$.
+
+(b) MATLAB script VAR\_SV.m contains the Gibbs sampler of part a) for
+estimating the VAR-SV model using US quarterly observations on CPI
+inflation, unemployment and the interest rate from 1959Q2 to 2013Q4.
+
+We report the time-varying volatility of the three equations expressed as
+standard deviations in Figure 3. The volatility of all three equations
+decreases substantially in the early 1980s, the timing of which matches the
+onset of the Great Moderation. The volatility remains low until the Great
+Recession. These results show that the error variances of all three
+equations have substantial time variation. Extending the standard VAR with
+constant variance to one with stochastic volatility is therefore empirically
+relevant.
+
+\FRAME{itbpFU}{5.604in}{2.1136in}{0in}{\Qcb{Figure 3: Time-varying
+volatility of the inflation equation (left panel), unemployment equation
+(middle panel) and interest rate equation (right panel) expressed as
+standard deviations.}}{}{var_sv.eps}{\special{language "Scientific
+Word";type "GRAPHIC";maintain-aspect-ratio TRUE;display "USEDEF";valid_file
+"F";width 5.604in;height 2.1136in;depth 0in;original-width
+8.323in;original-height 3.1125in;cropleft "0";croptop "1";cropright
+"1";cropbottom "0";filename 'VAR_SV.eps';file-properties "XNPEU";}}
+
+\end{document}

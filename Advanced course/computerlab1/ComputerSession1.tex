@@ -1,0 +1,439 @@
+%2multibyte Version: 5.50.0.2960 CodePage: 1252
+
+\documentclass{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsmath}
+
+\setcounter{MaxMatrixCols}{10}
+%TCIDATA{OutputFilter=LATEX.DLL}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{Codepage=1252}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=Manual}
+%TCIDATA{Created=Tuesday, June 13, 2017 09:19:44}
+%TCIDATA{LastRevised=Tuesday, May 15, 2018 15:35:11}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{<META NAME="DocumentShell" CONTENT="Standard LaTeX\Blank - Standard LaTeX Article">}
+%TCIDATA{Language=American English}
+%TCIDATA{CSTFile=40 LaTeX article.cst}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+\input{tcilatex}
+\begin{document}
+
+
+\begin{center}
+\textbf{Computer Tutorial 1: Bayesian VARs}
+\end{center}
+
+In this exercise sheet, I\ provide a series of questions and answers
+relating to two Bayesian VARs. Given that I\ am providing the answers, what
+do I expect you to do in the computer sessions?\ First I\ am not expecting
+you to go through the theoretical derivations and proofs (parts a and b of
+Exercise 1 and part a)\ of Exercise 2). However, since I\ do not have time
+to do proofs in the lectures, I\ felt I\ should make them available to you
+in case you want to see them or have them as a resource for your future
+Bayesian research. So I\ suggest you do only a quick reading of this
+exercise sheet (without worrying about the details of the proofs) before the
+computer tutorial to get an overview of the model each exercise relates to.
+Instead focus on the computational part of the each exercise (parts c)\ and
+b), respectively, of the two exercises). Code which does these exercises is
+provided. In the computer lab, I suggest you experiment with these codes
+(e.g. try different priors, lag lengths, etc.)\ to familiarize yourself with
+Bayesian programming in VARs.
+
+Some of the notation I\ use in this exercise sheet is different than that
+used in the lecture.
+
+\newpage
+
+\begin{center}
+\textbf{Exercise 1 (The Vector Autoregressive Model with Independent
+Normal-Wishart Prior)}
+\end{center}
+
+Suppose $y_{t}=(y_{1t},\ldots ,y_{nt})^{\prime }$ is a vector of $n$
+dependent variables at time $t$ for $t=1,\ldots ,T$. Then the VAR($p$) is
+defined as: 
+\begin{equation}
+y_{t}=b+A_{1}y_{t-1}+\cdots +A_{p}y_{t-p}+\epsilon _{t},  \label{VAR-y}
+\end{equation}%
+where $b$ is an $n\times 1$ vector of intercepts, $A_{1},\ldots ,A_{p}$ are $%
+n\times n$ coefficient matrices and $\epsilon _{t}\sim N(0,\Sigma )$. In
+other words, the VAR($p$) is simply a multiple-equation regression where the
+regressors are the lagged dependent variables.\footnote{%
+Note that the VAR depends on $p$ initial conditions $y_{-p+1},\ldots ,y_{0}$%
+. In principle these initial conditions can be modeled explicitly. However,
+it is common to treat them as fixed (i.e. the first $p$ observations used as
+initial conditions and the estimation sample begins with the $\left(
+p+1\right) ^{th}$ observation). We adopt this strategy in these exercises.}
+
+The VAR($p$) can be written as: 
+\begin{equation*}
+y_{t}=X_{t}\beta +\epsilon _{t},
+\end{equation*}%
+where $X_{t}=I_{n}\otimes \lbrack 1,y_{t-1}^{\prime },\ldots
+,y_{t-p}^{\prime }]$ and $\beta =\text{vec}([b,\,A_{1},\,\cdots
+\,A_{p}]^{\prime }).$ Alternatively, the observations can be stacked over $%
+t=1,\ldots ,T$ \ so that the VAR($p$) can be written as 
+\begin{equation*}
+y=X\beta +\epsilon
+\end{equation*}%
+where $\epsilon \sim N(0,I_{T}\otimes \Sigma )$.
+
+(a) Derive the likelihood function for the VAR.
+
+(b) Assume that the priors for $\beta $ and $\Sigma $ are independent of one
+another and take the form: 
+\begin{equation}
+\beta \sim N(\beta _{0},V_{\boldsymbol{\beta }}),\quad \Sigma \sim IW(\nu
+_{0},S_{0})  \label{VAR-prior}
+\end{equation}%
+where $IW(.,.)$ is the inverse-Wishart distribution. This is often referred
+to as the independent Normal-Wishart prior. Derive a Gibbs sampler which
+allows for posterior inference in the VAR.
+
+(c)\ Use the data set US\_macrodata.csv provided which contains US quarterly
+data on the CPI inflation rate, the unemployment rate and Fed Funds rate
+from 1959Q2 to 2007Q4---the sample ends at 2007Q4 to avoid the periods when
+interest rate hits the zero lower bound. Estimate a VAR\ using this data set
+and the Gibbs sampler derived in part b). Calculate impulse responses of all
+variables to a monetary policy shock.
+
+\textbf{Solution to Exercise 1}
+
+(a) Since the VAR($p$) is a multivariate regression model, standard Bayesian
+derivations used with multivariate Normal analysis apply (see Exercise
+2.14). In particular, since 
+\begin{equation*}
+(y\,|\,\beta ,\Sigma )\sim N(X\beta ,I_{T}\otimes \Sigma ),
+\end{equation*}%
+the likelihood function is given by: 
+\begin{align}
+p(y\,|\,\beta ,\Sigma )& =|2\pi (I_{T}\otimes \Sigma )|^{-\frac{1}{2}}\text{e%
+}^{-\frac{1}{2}(y-X\beta )^{\prime }(I_{T}\otimes \Sigma )^{-1}(y-X\beta )} 
+\notag \\
+& =(2\pi )^{-\frac{Tn}{2}}|\Sigma |^{-\frac{T}{2}}\text{e}^{-\frac{1}{2}%
+(y-X\beta )^{\prime }(I_{T}\otimes \Sigma ^{-1})(y-X\beta )},
+\label{VAR-like1}
+\end{align}%
+where the second equality holds because $|I_{T}\otimes \Sigma |=|\Sigma
+|^{T} $ and $(I_{T}\otimes \Sigma )^{-1}=I_{T}\otimes \Sigma ^{-1}$. Note
+that the likelihood can also be written as 
+\begin{equation}
+p(y\,|\,\beta ,\Sigma )=(2\pi )^{-\frac{Tn}{2}}|\Sigma |^{-\frac{T}{2}}\text{%
+e}^{-\frac{1}{2}\sum_{t=1}^{T}(y_{t}-X_{t}\beta )^{\prime }\Sigma
+^{-1}(y_{t}-X_{t}\beta )}.  \label{VAR-like2}
+\end{equation}
+
+(b) We derive a Gibbs sampler for the VAR($p$) with likelihood given in (\ref%
+{VAR-like1}) and priors given in (\ref{VAR-prior}). Specifically, we derive
+the two conditional densities $p(\beta \,|\,y,\Sigma )$ and $p(\Sigma
+\,|\,y,\beta )$.
+
+The first step is straightforward, as standard linear regression results
+apply (see Chapter 10 of Bayesian Econometric Methods). In fact, we have 
+\begin{equation*}
+(\beta \,|\,y,\Sigma )\sim N(\hat{\beta},K_{\beta }^{-1}),
+\end{equation*}%
+where 
+\begin{equation*}
+K_{\beta }=V_{\beta }^{-1}+X^{\prime }(I_{T}\otimes \Sigma ^{-1})X,\quad 
+\hat{\beta}=K_{\beta }^{-1}\left( V_{\beta }^{-1}\beta _{0}+X^{\prime
+}(I_{T}\otimes \Sigma ^{-1})y\right) ,
+\end{equation*}%
+and we have used the result $(I_{T}\otimes \Sigma )^{-1}=I_{T}\otimes \Sigma
+^{-1}$.
+
+Next, we derive the conditional density $p(\Sigma \,|\,y,\beta )$. We will
+use the fact that, for conformable matrices $A,B,C$, we have 
+\begin{equation*}
+\text{tr}(ABC)=\text{tr}(BCA)=\text{tr}(CAB).
+\end{equation*}%
+Combining the likelihood in (\ref{VAR-like1}) with the inverse-Wishart prior
+for $\Sigma $, we obtain 
+\begin{align*}
+p(\Sigma \,|\,y,\beta )& \propto p(y\,|\,\beta ,\Sigma )p(\Sigma ) \\
+& \propto |\Sigma |^{-\frac{T}{2}}\text{e}^{-\frac{1}{2}%
+\sum_{t=1}^{T}(y_{t}-X_{t}\beta )^{\prime }\Sigma ^{-1}(y_{t}-X_{t}\beta
+)}\times |\Sigma |^{-\frac{\nu _{0}+n+1}{2}}\text{e}^{-\frac{1}{2}\text{tr}%
+(S_{0}\Sigma ^{-1})} \\
+& \propto |\Sigma |^{-\frac{\nu _{0}+n+T+1}{2}}\text{e}^{-\frac{1}{2}\text{tr%
+}(S_{0}\Sigma ^{-1})}\text{e}^{-\frac{1}{2}\text{tr}\left[
+\sum_{t=1}^{T}(y_{t}-X_{t}\beta )(y_{t}-X_{t}\beta )^{\prime }\Sigma ^{-1}%
+\right] } \\
+& \propto |\Sigma |^{-\frac{\nu _{0}+n+T+1}{2}}\text{e}^{-\frac{1}{2}\text{tr%
+}\left[ \left( S_{0}+\sum_{t=1}^{T}(y_{t}-X_{t}\beta )(y_{t}-X_{t}\beta
+)^{\prime }\right) \boldsymbol{\Sigma }^{-1}\right] },
+\end{align*}%
+which is the kernel of an inverse-Wishart density (type \textquotedblleft
+inverse-Wishart\textquotedblright\ into Wikipedia to see this). Thus, we
+have 
+\begin{equation*}
+(\Sigma \,|\,y,\beta )\sim IW\left( \nu
+_{0}+T,S_{0}+\sum_{t=1}^{T}(y_{t}-X_{t}\beta )(y_{t}-X_{t}\beta )^{\prime
+}\right) .
+\end{equation*}
+
+We summarize the Gibbs sampler as follows
+
+\begin{algorithm}
+\textrm{\textbf{(Gibbs Sampler for the VAR($p$)).} }
+
+\textrm{Pick some initial values }$\mathrm{\beta }^{\mathrm{(0)}}\mathrm{=c}%
+_{\mathrm{0}}$\textrm{\ and }$\mathrm{\Sigma }^{\mathrm{(0)}}\mathrm{=C}_{%
+\mathrm{0}}\mathrm{>0}$\textrm{. Then, repeat the following steps from }$%
+\mathrm{r=1}$\textrm{\ to }$\mathrm{R}$\textrm{: }
+
+\begin{enumerate}
+\item \textrm{\ Draw }$\mathrm{\beta }$\textrm{$^{(r)}\sim p(\beta
+\,|\,y,\Sigma ^{(r-1)})$ (multivariate Normal). }
+
+\item \textrm{Draw }$\mathrm{\Sigma }^{\mathrm{(r)}}$\textrm{$\sim p(\Sigma
+\,|\,y,\beta ^{(r)})$ (inverse-Wishart). }
+\end{enumerate}
+\end{algorithm}
+
+(c) Matlab code which answers this question and produces the figures below
+is provided. Empirical results below use a VAR(2) and sets $\beta _{0}=0,V_{%
+\boldsymbol{\beta }}=I$ (except for the diagonal elements of $V_{\boldsymbol{%
+\beta }}$ which correspond to the intercepts in each equation which are set
+to $10$), $\nu _{0}=6,S_{0}=I$. In order to identify the monetary policy
+shocks we order the interest rate last and treat it as the monetary policy
+instrument.
+
+We first implement the Gibbs sampler described in part b). Then, given the
+posterior draws of $\beta $ and $\Sigma $, we compute the impulse-response
+functions of the three variables to a 100-basis-point monetary policy shock.
+Thus, the MATLAB code contains several scripts. The main script is VAR.m. It
+loads the dataset, constructs the regression matrix $X$ using the script
+SURform2.m.
+
+For each of the posterior draws of $\beta $ and $\Sigma $, we use the script
+construct\_IR.m to compute the impulse-response functions of the three
+variables to a 100-basis-point monetary policy shock. More specifically, we
+consider two alternative paths: in one a 100-basis-point monetary policy
+shock hits the system, and in the other this shock is absent. We then let
+the two systems evolve according to the VAR($p$) written as the regression 
+\begin{equation*}
+y_{t}=X_{t}\beta _{t}+C\tilde{\epsilon}_{t},\quad \tilde{\epsilon}_{t}\sim
+N(0,I_{3}),
+\end{equation*}%
+for $t=1,\ldots ,n_{\mathrm{hz}}$, where $n_{\mathrm{hz}}$ denotes the
+number of horizons and $C$ is the Cholesky factor of $\Sigma $. Each
+impulse-response function is then the difference between these two paths.
+
+The impulse-response functions of inflation, unemployment and interest rate
+to a 100-basis-point monetary policy shock are given in the figure below.
+
+\FRAME{itbpFU}{5.604in}{2.1136in}{0in}{\Qcb{Impulse-response functions of
+inflation (left panel), unemployment (middle panel) and interest rate (right
+panel) to a 100-basis-point monetary policy shock.}}{}{var_ir.eps}{\special%
+{language "Scientific Word";type "GRAPHIC";maintain-aspect-ratio
+TRUE;display "USEDEF";valid_file "F";width 5.604in;height 2.1136in;depth
+0in;original-width 8.323in;original-height 3.1125in;cropleft "0";croptop
+"1";cropright "1";cropbottom "0";filename 'VAR_IR.eps';file-properties
+"XNPEU";}}
+
+By construction, the interest rate increases by 1\% on impact, and it
+gradually goes back to zero over the next 20 quarters. The impact on
+unemployment is delayed and positive---the unemployment rate rises slowly
+and reaches a peak of about 0.25\% after 3 years on impact.
+
+In contrast, the inflation rate rises shortly after impact, and the effect
+is positive. The literature often refers to this empirical finding as the
+price puzzle---a contractionary monetary policy shock should dampen rather
+than increase inflation. Some argue that this reflects
+misspecification---some crucial variables are omitted, and both interest
+rate and inflation are responding to these omitted variables. Alternatively,
+Primiceri (2005) argues that the monetary policy shocks identified in this
+context should be interpreted as non-systematic policy actions that capture
+both policy mistakes and interest rate movements that are responses to
+variables other than inflation and unemployment.
+
+\newpage
+
+\textbf{Exercise 2 (The VAR\ with Minnesota Prior)}
+
+For this exercise, we use the notation and data set of Exercise 1. The
+Minnesota prior has traditionally been the most popular prior for Bayesian
+VARs. It involves a simplification in that $\Sigma $ is assumed to be a
+diagonal matrix and replaced with an estimate, $\widehat{\Sigma }$, where $%
+\widehat{\sigma }_{ii}=s_{i}^{2}$ (where $s_{i}^{2}$ is the standard OLS
+estimate of the error variance using an AR model for the $i^{th}$ variable
+and $\widehat{\sigma }_{ii}$ is the $ii^{th}$ element of $\widehat{\Sigma }$%
+). To explain the prior for the vector of VAR($p$)\ coefficients, $\beta $,
+note that some elements correspond to own lags (e.g. in the equation for the
+first variable in the VAR\ there are lags of the first variable), some
+elements correspond to other lags (e.g. in the equation for the first
+variable in the VAR\ there are lags of the second and third variables) and
+some to exogenous or deterministic variables (e.g. the intercept). The
+Minnesota prior reflects a belief that own lags are more likely to be
+important explanatory variables than other lags and more recent lags are
+likely to be more important than those in the more distant past.
+
+The Minnesota prior assumes $\beta \sim N(\beta _{0},V_{\boldsymbol{\beta }%
+}) $. Consider first, the prior mean, $\beta _{0}$. When using stationary
+variables which exhibit little persistence (e.g. the growth rates of
+macroeconomic variables) it is common to simply set $\beta _{0}=0$. When
+working with nonstationary data (e.g. the logs of macroeconomic variables)
+it is common to set $\beta _{0}=0$ except for the elements corresponding to
+the first own lag of the dependent variable in each equation. These elements
+are set to one. Next consider the prior covariance matrix, $V_{\boldsymbol{%
+\beta }}$, which is assumed to be a diagonal matrix. The Minnesota prior
+sets the diagonal elements of $V_{\boldsymbol{\beta }}$ as follows:
+
+\begin{itemize}
+\item $\frac{\underline{a}_{1}}{r^{2}}$ for coefficients on own lag $r$ for $%
+r=1,..,p$
+
+\item $\frac{\underline{a}_{2}\widehat{\sigma }_{ii}}{r^{2}\widehat{\sigma }%
+_{jj}}$ for coefficients on lag $r$ of variable $j\neq i$ for $r=1,..,p$ in
+equation $i$
+
+\item $\underline{a}_{3}\widehat{\sigma }_{ii}$ for coefficients on
+deterministic or exogenous variables in equation $i$.
+\end{itemize}
+
+The Minnesota prior thus turns a complicated prior elicitation procedure
+into a much simpler one which requires the research to select three scalar
+prior hyperparameters, $\underline{a}_{1},\underline{a}_{2}$ and $\underline{%
+a}_{3}$. Typically the researcher sets $\underline{a}_{1}>\underline{a}_{2}.$
+In cases where the number of deterministic terms is small (e.g. if the only
+such terms are intercepts) then $\underline{a}_{3}$ is set to a large
+number, reflecting relatively non-informative prior beliefs.
+
+(a) Derive the posterior for the VAR\ parameters using the Minnesota prior.
+Discuss what computational methods can be used to carry out Bayesian
+inference with this posterior.
+
+(b) Use the data set described in Exercise 1. Estimate a VAR\ with the
+Minnesota prior using this data set.
+
+\textbf{Solution to Exercise 2}
+
+(a) This derivation involves working out the posterior for $\beta $
+conditional on $\Sigma =\widehat{\Sigma }$. But an identical derivation was
+done in Exercise 1 as part of the derivation of the Gibbs sampler in that
+exercise. Thus, we can simply use our previous derivation to say: 
+\begin{equation*}
+(\beta \,|\,y)\sim N(\hat{\beta},K_{\beta }^{-1}),
+\end{equation*}%
+where 
+\begin{equation*}
+K_{\beta }=V_{\beta }^{-1}+X^{\prime }(I_{T}\otimes \widehat{\Sigma }%
+^{-1})X,\quad \hat{\beta}=K_{\beta }^{-1}\left( V_{\beta }^{-1}\beta
+_{0}+X^{\prime }(I_{T}\otimes \widehat{\Sigma }^{-1})y\right) ,
+\end{equation*}%
+where the Minnesota prior forms for $\beta _{0}$ and $V_{\beta }$ are used.
+This implies that posterior inference can be done analytically. That is, the
+posterior mean of the VAR\ coefficients is $\hat{\beta}$ and the posterior
+covariance matrix is $K_{\beta }^{-1}$. The properties of the Normal
+distribution can be used to calculate other features such as credible
+intervals.
+
+Thus, there is no need to use any posterior simulation method with the
+Minnesota prior unless interest centers on nonlinear functions of $\beta $
+such as impulse response functions. Monte Carlo integration can be used to
+carry out posterior inference on features such as impulse response
+functions. That is, draws can be taken from the Normal posterior for $\beta $
+and each transformed to produce an impulse response function. Averages of
+these draws will converge to the posterior mean of the impulse response
+function.
+
+(b) Matlab code (named bvar\_minnesota.m) which answers this question is
+provided. The results below set $p=1$ and $\underline{a}_{1}=0.5,\underline{a%
+}_{2}=0.25$ and $\underline{a}_{3}=100$ and include an intercept. We have
+also set $\beta _{0}=0$ (although the user may wish to experiment with other
+values as the variables do display a fairly high degree of persistence). The
+following table presents estimates of the VAR\ coefficients along with their
+posterior standard deviations. Each column of the table presents results for
+one of the three equations in the VAR. If we use the rule of thumb which
+says a variable has important explanatory power if its posterior mean is
+more than two posterior standard deviations from zero, then the first own
+lag is important in every equation. Beyond this, it is only the unemployment
+equation which has any important explanatory variables.
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\multicolumn{4}{|l|}{%
+\begin{tabular}{l}
+Table 21.1:\ Posterior Results using Minnesota Prior for the VAR \\ 
+Posterior mean (stand. dev. in parentheses)%
+\end{tabular}%
+} \\ \hline
+& Inflation & Unemployment & Interest Rate \\ \hline
+Lag inflation & 
+\begin{tabular}{l}
+$0.701$ \\ 
+$\left( 0.057\right) $%
+\end{tabular}
+& 
+\begin{tabular}{l}
+$0.088$ \\ 
+$\left( 0.040\right) $%
+\end{tabular}
+& 
+\begin{tabular}{l}
+$0.212$ \\ 
+$\left( 0.128\right) $%
+\end{tabular}
+\\ \hline
+Lag unemployment & 
+\begin{tabular}{l}
+$-0.028$ \\ 
+$\left( 0.022\right) $%
+\end{tabular}
+& 
+\begin{tabular}{l}
+$0.953$ \\ 
+$\left( 0.016\right) $%
+\end{tabular}
+& 
+\begin{tabular}{l}
+$-0.050$ \\ 
+$\left( 0.050\right) $%
+\end{tabular}
+\\ \hline
+Lag interest rate & 
+\begin{tabular}{l}
+$0.038$ \\ 
+$\left( 0.013\right) $%
+\end{tabular}
+& 
+\begin{tabular}{l}
+$0.023$ \\ 
+$\left( 0.009\right) $%
+\end{tabular}
+& 
+\begin{tabular}{l}
+$0.927$ \\ 
+$\left( 0.303\right) $%
+\end{tabular}
+\\ \hline
+\end{tabular}
+\end{center}
+
+\end{document}

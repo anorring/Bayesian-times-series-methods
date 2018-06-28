@@ -1,0 +1,324 @@
+% The VAR with SSVS prior
+% The specification of the prior hyperparmeters are in the file
+% prior_hyper.m. See there for details.
+%
+% ALPHA is the K x M matrix of VAR coefficients,
+% alpha is the KM x 1 column vector of vectorized VAR coefficients, i.e.
+% alpha = vec(ALPHA), and SIGMA is the M x M VAR covariance matrix.
+%--------------------------------------------------------------------------
+% The VAR is written as:
+%
+%                   Y(t) = X(t) x A + e(t)
+%
+% where e(t) ~ N(0,SIGMA), and A summarizes all parameters. Note that we
+% also use the vector a which is defined as a=vec(A).
+%--------------------------------------------------------------------------
+% NOTES: The code sacrifices efficiency for clarity. It follows the
+%        theoretical equations in the monograph and the manual.
+%
+% AUTHORS: Gary Koop and Dimitris Korobilis
+%--------------------------------------------------------------------------
+
+clear all;
+tic;
+
+%------------------------------LOAD DATA-----------------------------------
+[Yraw,Dates] = xlsread('US_macrodata.csv');
+
+% If you want to use this code with different data, call your data set 'Yraw', in order to avoid changing the
+% rest of the code. Note that 'Yraw' is a matrix with T rows by M columns,
+% where T is the number of time series observations (usually months or
+% quarters), while M is the number of VAR dependent macro variables.
+
+%----------------------------PRELIMINARIES---------------------------------
+% Define specification of the VAR model
+constant = 1;        % 1: if you desire intercepts, 0: otherwise 
+p = 1;               % Number of lags on dependent variables
+
+
+
+% Gibbs-related preliminaries
+nsave = 20000;         % Final number of draws to save
+nburn = 2000;         % Draws to discard (burn-in)
+
+ntot = nsave + nburn;  % Total number of draws
+it_print = 2000;       % Print on the screen every "it_print"-th iteration
+%--------------------------DATA HANDLING-----------------------------------
+% Get initial dimensions of dependent variable
+[Traw M] = size(Yraw);
+
+
+   Y1 = Yraw;
+   Y2 = Yraw;
+
+        
+% Generate lagged Y matrix. This will be part of the X matrix
+Ylag = mlag2(Y2,p); 
+
+% Now define matrix X which has all the R.H.S. variables (constant, lags of
+% the dependent variable and exogenous regressors/dummies).
+% Note that in this example I do not include exogenous variables (other macro
+% variables, dummies, or trends). You can load a file with exogenous
+% variables, call them, say W, and then extend variable X in the next set of lines:
+%            X = [ones(Traw-p,1) Ylag(p+1:Traw,:) W(p+1:Traw,:)];
+% or:
+%            X = [Ylag(p+1:Traw,:)  W(p+1:Traw,:)];
+if constant
+    X = [ones(Traw-p,1) Ylag(p+1:Traw,:)];
+else
+    X = Ylag(p+1:Traw,:);  
+end
+
+% Get size of final matrix X
+[Traw3 K] = size(X);
+
+
+% Form Y matrix accordingly
+% Delete first "LAGS" rows to match the dimensions of X matrix
+Y = Y1(p+1:Traw,:); % This is the final Y matrix used for the VAR
+
+% Traw was the dimesnion of the initial data. T is the number of actual 
+% time series observations of Y and X
+T = Traw - p;
+
+
+
+
+%-----------------------------PRELIMINARIES--------------------------------
+% First get ML estimators
+A_OLS = inv(X'*X)*(X'*Y); % This is the matrix of regression coefficients
+a_OLS = A_OLS(:);         % This is the vector of parameters, i.e. it holds
+                          % that a_OLS = vec(A_OLS)
+SSE = (Y - X*A_OLS)'*(Y - X*A_OLS);   % Sum of squared errors
+SIGMA_OLS = SSE./(T-K+1);
+
+% Initialize Bayesian posterior parameters using OLS values
+alpha = a_OLS;     % This is the single draw from the posterior of alpha
+ALPHA = A_OLS;     % This is the single draw from the posterior of ALPHA
+SSE_Gibbs = SSE;   % This is the SSE based on each draw of ALPHA
+SIGMA = SIGMA_OLS; % This is the single draw from the posterior of SIGMA
+IXY =  kron(eye(M),(X'*Y));
+
+
+% Storage space for posterior draws
+alpha_draws = zeros(nsave,K*M);   % save draws of alpha
+ALPHA_draws = zeros(nsave,K,M);   % save draws of alpha
+SIGMA_draws = zeros(nsave,M,M);   % save draws of ALPHA
+
+%-----------------Prior hyperparameters 
+prior_hyper;
+
+    
+%========================== Start Sampling ================================
+%==========================================================================
+
+disp('Number of iterations');
+for irep = 1:ntot  %Start the Gibbs "loop"
+    if mod(irep,it_print) == 0 % print iterations
+        disp(irep);
+        toc;
+    end
+    
+    
+        
+    %--------- Draw ALPHA and SIGMA using SSVS prior 
+  
+            % Draw psi|alpha,gamma,omega,DATA from the GAMMA dist.
+            % Get S_[j] - upper-left [j x j] submatrices of SSE
+            % The following loop creates a cell array with elements S_1,
+            % S_2,...,S_j with respective dimensions 1x1, 2x2,...,jxj
+            S=cell(1,M);
+            for kk_2 = 1:M                                       
+                S{kk_2} = SSE_Gibbs(1:kk_2,1:kk_2);   
+            end
+            % Set also SSE =(s_[i,j]) & get vectors s_[j]=(s_[1,j] , ... , s_[j-1,j])
+            s=cell(1,M-1);
+            for kk_3 = 2:M
+                s{kk_3 - 1} = SSE_Gibbs(1:(kk_3 - 1),kk_3);
+            end
+            % Parameters for Heta|omega ~ N_[j-1](0,D_[j]*R_[j]*D_[j]), see eq. (15)
+            % Create and update h_[j] matrix
+            % If omega_[ij] = 0 => h_[ij] = kappa0, else...
+            hh=cell(1,M-1);
+            for kk_4 = 1:M-1                  
+                omeg = cell2mat(omega(kk_4));
+                het = cell2mat(hh(kk_4));
+                for kkk = 1:size(omeg,1)           
+                    if omeg(kkk,1) == 0
+                        het(kkk,1) = kappa_0;
+                    else                        
+                        het(kkk,1) = kappa_1;               
+                    end
+                end
+                hh{kk_4} = het;
+            end            
+            % D_j = diag(hh_[1j],...,hh_[j-1,j])
+            D_j=cell(1,M-1);
+            for kk_5 = 1:M-1           
+                D_j{kk_5} = diag(cell2mat(hh(kk_5)));
+            end
+            % Now create covariance matrix D_[j]*R_[j]*D_[j], see eq. (15)
+            DD_j=cell(1,M-1);
+            for kk_6 = 1:M-1
+                DD = cell2mat(D_j(kk_6));
+                DD_j{kk_6} = (DD*DD);
+            end
+            % Create B_[i] matrix
+            B=cell(1,M);
+            for rr = 1:M           
+                if rr == 1
+                    B{rr} = b_i + 0.5*(SSE(rr,rr));
+                elseif rr > 1
+                    s_i = cell2mat(s(rr-1));
+                    S_i = cell2mat(S(rr-1));
+                    DiDi = cell2mat(DD_j(rr-1));
+                    B{rr} = b_i + 0.5*(SSE_Gibbs(rr,rr) - s_i'*inv(S_i + inv(DiDi))*s_i);
+                end
+            end
+            % Now get B_i from cell array B, and generate (psi_[ii])^2
+            B_i = cell2mat(B);
+            psi_ii_sq = zeros(M,1);
+            for kk_7 = 1:M	              
+                psi_ii_sq(kk_7,1) = gamm_rnd(1,1,(a_i + 0.5*T),B_i(1,kk_7));
+            end
+            
+            % Draw eta|psi,phi,gamma,omega,DATA from the [j-1]-variate
+            % NORMAL dist.
+            eta = cell(1,M-1);
+            for kk_8 = 1:M-1       
+                s_i = cell2mat(s(kk_8));
+                S_i = cell2mat(S(kk_8));
+                DiDi = cell2mat(DD_j(kk_8));
+                miu_j = - sqrt(psi_ii_sq(kk_8+1))*(inv(S_i + inv(DiDi))*s_i);
+                Delta_j = inv(S_i + inv(DiDi));
+                
+                eta{kk_8} = miu_j + chol(Delta_j)'*randn(kk_8,1);
+            end
+           
+            % Draw omega|eta,psi,phi,gamma,omega,DATA from BERNOULLI dist.
+            omega_vec = []; %temporary vector to store draws of omega
+            for kk_9 = 1:M-1       
+                omeg_g = cell2mat(omega(kk_9));
+                eta_g = cell2mat(eta(kk_9));
+                for nn = 1:size(omeg_g)  % u_[ij1], u_[ij2], see eqs. (32 - 33)                          
+                    u_ij1 = (1./kappa_0)*exp(-0.5*((eta_g(nn))^2)./((kappa_0)^2))*q_ij;
+                    u_ij2 = (1./kappa_1)*exp(-0.5*((eta_g(nn))^2)./((kappa_1)^2))*(1-q_ij);
+                    ost = u_ij1./(u_ij1 + u_ij2);
+                    omeg_g(nn,1) = bernoullirnd(ost);
+                    omega_vec = [omega_vec ; omeg_g(nn,1)]; %#ok<AGROW>
+                end
+                omega{kk_9} = omeg_g; %#ok<AGROW>
+            end
+            
+            % Create PSI matrix from individual elements of "psi_ii_sq" and "eta"
+            PSI_ALL = zeros(M,M);
+            for nn_1 = 1:M  % first diagonal elements
+                PSI_ALL(nn_1,nn_1) = sqrt(psi_ii_sq(nn_1,1));   
+            end
+            for nn_2 = 1:M-1 % Now non-diagonal elements
+                eta_gg = cell2mat(eta(nn_2));
+                for nnn = 1:size(eta_gg,1)
+                    PSI_ALL(nnn,nn_2+1) = eta_gg(nnn);
+                end
+            end
+            % Create SIGMA
+            SIGMA = inv(PSI_ALL*PSI_ALL');        
+            
+        % Draw alpha              
+        % Hyperparameters for alpha|gamma ~ N_[m](0,D*D)
+        h_i = zeros(n,1);   % h_i is tau_0 if gamma=0 and tau_1 if gamma=1
+        for nn_3 = 1:n
+            if gammas(nn_3,1) == 0               
+                h_i(nn_3,1) = tau_0(nn_3);
+            elseif gammas(nn_3,1) == 1        
+                h_i(nn_3,1) = tau_1(nn_3);       
+            end
+        end
+        D = diag(h_i'*eye(n)); % Create D. Here D=diag(h_i) will also do
+        DD = D*D;   % Prior covariance matrix for Phi_m
+        isig=inv(SIGMA);
+        psi_xx = kron(inv(SIGMA),(X'*X));
+        V_post = inv(psi_xx + inv(DD));
+%        a_post = V_post*((psi_xx)*a_OLS + (inv(DD))*a_prior);
+        
+         visig=isig(:);
+       a_post = V_post*(IXY*visig + inv(DD)*a_prior);
+        alpha = a_post + chol(V_post)'*randn(n,1); % Draw alpha
+        
+        alpha = a_post + chol(V_post)'*randn(n,1); % Draw alpha
+   
+        ALPHA = reshape(alpha,K,M); % Draw of ALPHA
+        
+        % Draw gamma|phi,psi,eta,omega,DATA from BERNOULLI dist.    
+        for nn_6 = 1:n
+            u_i1 = (1./tau_0(nn_6))*exp(-0.5*(alpha(nn_6)./(tau_0(nn_6)))^2)*p_i;           
+            u_i2 = (1./tau_1(nn_6))*exp(-0.5*(alpha(nn_6)./(tau_1(nn_6)))^2)*(1-p_i);
+            gst = u_i1./(u_i1 + u_i2);
+            gammas(nn_6,1) = bernoullirnd(gst); %#ok<AGROW>
+        end
+        
+        % Save new Sum of Squared Errors (SSE) based on draw of ALPHA  
+        SSE_Gibbs = (Y - X*ALPHA)'*(Y - X*ALPHA);
+    
+    
+    % =============Estimation ends here
+    
+    if irep>nburn
+    
+        %----- Save draws of the parameters
+        alpha_draws(irep-nburn,:) = alpha;
+        ALPHA_draws(irep-nburn,:,:) = ALPHA;
+        SIGMA_draws(irep-nburn,:,:) = SIGMA;
+            gamma_draws(irep-nburn,:) = gammas;
+                omega_draws(irep-nburn,:) = omega_vec; 
+    end
+       
+end %end the main Gibbs for loop
+%====================== End Sampling Posteriors ===========================
+
+%Posterior mean of parameters:
+ALPHA_mean = squeeze(mean(ALPHA_draws,1)); %posterior mean of ALPHA
+SIGMA_mean = squeeze(mean(SIGMA_draws,1)); %posterior mean of SIGMA
+
+%Posterior standard deviations of parameters:
+ALPHA_std = squeeze(std(ALPHA_draws,1)); %posterior std of ALPHA
+SIGMA_std = squeeze(std(SIGMA_draws,1)); %posterior std of SIGMA
+
+%or you can use 'ALPHA_COV = cov(alpha_draws,1);' to get the full
+%covariance matrix of the posterior of alpha (of dimensions [KM x KM] )
+
+    % Find average of restriction indices Gamma
+    gammas = mean(gamma_draws,1);
+    gammas_mat = reshape(gammas,K,M);
+        % Find average of restriction indices Omega
+        omega = mean(omega_draws,1)';
+        omega_mat = zeros(M,M);
+        for nn_5 = 1:M-1
+            ggg = omega(((nn_5-1)*(nn_5)/2 + 1):(nn_5*(nn_5+1)/2),:);
+            omega_mat(1:size(ggg,1),nn_5+1) = ggg;
+        end
+    
+
+
+disp('The posterior mean of alpha')
+ALPHA_mean
+
+disp('The posterior st dev of alpha')
+ALPHA_std
+
+
+disp('The posterior mean of SSVS indicators for VAR coeffs')
+gammas_mat
+
+
+disp('The posterior mean of SIGMA')
+SIGMA_mean
+
+disp('The posterior st dev of SIGMA')
+SIGMA_std
+
+
+disp('The posterior mean of SSVS indicators for Off-diagonal elements of SIGMA')
+omega_mat
+
+

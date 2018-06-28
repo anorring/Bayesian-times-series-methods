@@ -1,0 +1,383 @@
+%2multibyte Version: 5.50.0.2960 CodePage: 1252
+
+\documentclass{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsmath}
+
+\setcounter{MaxMatrixCols}{10}
+%TCIDATA{OutputFilter=LATEX.DLL}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{Codepage=1252}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=Manual}
+%TCIDATA{Created=Tuesday, June 13, 2017 09:19:44}
+%TCIDATA{LastRevised=Friday, May 18, 2018 15:51:12}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{<META NAME="DocumentShell" CONTENT="Standard LaTeX\Blank - Standard LaTeX Article">}
+%TCIDATA{Language=American English}
+%TCIDATA{CSTFile=40 LaTeX article.cst}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+\input{tcilatex}
+\begin{document}
+
+
+\begin{center}
+\textbf{Computer Tutorial 2: Hierarchical Priors for Bayesian VARs}
+\end{center}
+
+In this exercise sheet, I\ provide a series of questions and answers
+relating to hierarchical priors in VARs. Exercise 1 is taken from the new
+edition of Bayesian Econometric Methods and includes both theoretical
+derivations and an empirical application. As with Computer Tutorial 1, I\ am
+not expecting you to go through the theoretical derivations and proofs in
+detail. Rather, the computer sssion will focus on the computational part of
+the exercise (part b). Code which does these exercises in provided. In the
+computer lab, I suggest you experiment with these codes (e.g. try different
+priors, lag lengths, etc.)\ to familiarize yourself with Bayesian
+programming in VARs.
+
+\newpage
+
+\textbf{Exercise 1 (Stochastic Search Variable Selection in VARs)}
+
+SSVS\ methods are a potentially useful way of surmounting
+over-parameterization and over-fitting concerns which arise when the number
+of potential explanatory variables is large relative to the number of
+observations. VARs, where each of $n$ equations contains $p$ lags of each of 
+$n$ dependent variables, also have many potential explanatory variables. And
+the error covariance matrix, $\Sigma $, contains $\frac{n\left( n-1\right) }{%
+2}$ free elements. Thus, with large VARs, involving dozens or more dependent
+variables, there are a huge number of parameters to estimate. Concerns about
+over-parameterization and over-fitting are likely to be especially severe
+with VARs. In light of these concerns, you are asked to:
+
+(a) Derive a Gibbs sampling algorithm which allows for Bayesian estimation
+of the VAR\ using a SSVS prior (VAR-SSVS)
+
+(b) Use the data set from Computer Tutorial 1 estimate the VAR-SSVS. Examine
+how sensitive your findings are to prior hyperparameter choices.
+
+\textbf{Solution to Exercise 1}
+
+(a) This solution sets up the prior and derives the posterior conditionals
+in the same manner as George, Sun and Ni (2008).
+
+We use notation where $\beta $ is the $K\times 1$ vector of VAR\
+coefficients and $\Sigma $ is the $n\times n$ error covariance matrix. We
+work with the Cholesky decomposition:
+
+\begin{equation*}
+\Sigma ^{-1}=\Psi \Psi ^{\prime }
+\end{equation*}%
+where $\Psi $ is upper-triangular with elements $\psi _{ij}$. The diagonal
+elements of the latter matrix are denoted by $\psi =\left( \psi
+_{11},..,\psi _{nn}\right) ^{\prime }$ and the off-diagonal upper-triangular
+elements by $\eta =\left( \eta _{2}^{\prime },..,\eta _{n}^{\prime }\right)
+^{\prime }$ where $\eta _{j}=\left( \psi _{1j},..,\psi _{j-1,j}\right)
+^{\prime }$ for $j=2,..,n$.
+
+The model is parameterized in terms of $\beta ,\psi $ and $\eta $. SSVS can
+be interpreted as defining a particular hierarchical prior for these
+parameters. In particular, the prior for the VAR\ coefficients is%
+\begin{equation}
+\beta |\gamma ^{\beta }\sim N\left( 0,\underline{D}^{\beta }\right)
+\label{SSVS_prior_beta}
+\end{equation}%
+where $\underline{D}^{\beta }$ is a diagonal matrix with diagonal elements $%
+\underline{d}_{i}^{\beta }$ for $i=1,..,K$ and $\gamma ^{\beta }=\left(
+\gamma _{1}^{\beta },..,\gamma _{k}^{\beta }\right) ^{\prime }$. The SSVS\
+nature of this prior arises by having $\gamma _{i}^{\beta }\in \left\{
+0,1\right\} $ and defining:%
+\begin{equation*}
+\underline{d}_{i}^{\beta }=\left\{ 
+\begin{tabular}{l}
+$\tau _{0i}^{2}$ if $\gamma _{i}^{\beta }=0$ \\ 
+$\tau _{1i}^{2}$ if $\gamma _{i}^{\beta }=1$%
+\end{tabular}%
+\right.
+\end{equation*}%
+where $\tau _{0i}^{2}$ is small and $\tau _{1i}^{2}$ is large.\footnote{%
+George, Sun and Ni (2008) describe a semi-default automatic approach to
+objectively choosing these small and large prior variances. In the empirical
+illustration of part b), we subjectively choose them.} Thus, if $\gamma
+_{i}^{\beta }=0$ the corresponding VAR\ coefficient is shrunk to be close to
+zero, whereas if $\gamma _{i}^{\beta }=1$ it is estimated in a relatively
+unrestricted fashion. $\gamma ^{\beta }$ is a vector of unknown parameters
+and, thus, requires a prior. We assume the elements of $\gamma ^{\beta }$ to
+be, a priori, independent of one another with%
+\begin{equation}
+\Pr \left( \gamma _{i}^{\beta }=0\right) =\underline{p}_{i}
+\label{SSVS_prior_gammab}
+\end{equation}%
+and, thus, $\Pr \left( \gamma _{i}^{\beta }=1\right) =1-\underline{p}_{i}$
+
+The hierarchical prior for $\eta $ has the same SSVS form allowing for
+individual error covariances to be shrunk towards zero or estimated in an
+unrestricted fashion. In particular, we assume, for $j=2,..,n$,%
+\begin{equation}
+\eta _{j}|\gamma _{j}^{\eta }\sim N\left( 0,\underline{D}_{j}^{\eta }\right)
+\label{SSVS_prior_eta}
+\end{equation}%
+where $\underline{D}_{j}^{\eta }=diag\left( \underline{d}_{1j}^{\eta },..,%
+\underline{d}_{j-1,j}^{\eta }\right) $. The vector of SSVS\ indicator
+variables, $\gamma _{ij}^{\eta }\in \left\{ 0,1\right\} $, is defined as $%
+\gamma ^{\eta }=\left( \gamma _{2}^{\eta },..,\gamma _{n}^{\eta }\right)
+^{\prime }$ where $\gamma _{j}^{\eta }=\left( \gamma _{1j}^{\eta },..,\gamma
+_{j-1,j}^{\eta }\right) ^{\prime }$. Next we assume%
+\begin{equation*}
+\underline{d}_{ij}^{\eta }=\left\{ 
+\begin{tabular}{l}
+$\kappa _{0ij}^{2}$ if $\gamma _{ij}^{\eta }=0$ \\ 
+$\kappa _{1ij}^{2}$ if $\gamma _{ij}^{\eta }=1$%
+\end{tabular}%
+\right.
+\end{equation*}%
+where $\kappa _{0ij}^{2}$ is small and $\kappa _{1i}^{2}$ is large. We
+assume the elements of $\gamma ^{\eta }$ to be, a priori, independent of one
+another with%
+\begin{equation}
+\Pr \left( \gamma _{ij}^{\eta }=0\right) =\underline{q}_{ij}.
+\label{SSVS_prior_gammaa}
+\end{equation}
+
+Finally, the error variances are assumed to have Gamma priors (independent
+of one another) and, thus,%
+\begin{equation}
+\psi _{ii}^{2}\sim G\left( \underline{a}_{i},\underline{b}_{i}\right)
+\label{SSVS_prior_psi}
+\end{equation}%
+for $i=1,..,n$.
+
+We next derive a Gibbs sampler involving the posterior conditionals for $%
+\beta ,\psi ,$ $\eta ,$ $\gamma ^{\beta }$ and $\gamma ^{\eta }$.
+
+We do not provide details of the posterior conditional for $\beta $ since
+they are given in the solution to Exercise 1 of Computer Session 1 with
+prior hyperparameters $\beta _{0},V_{\boldsymbol{\beta }}$ of that exercise
+replaced by $0,\underline{D}^{\beta }$ from (\ref{SSVS_prior_beta}). That
+is, conditional on $\gamma ^{\beta }$, the SSVS prior for $\beta $ is a
+Normal prior of exactly the same form as in yesterday's exercise.
+
+Any Bayesian posterior involves multiplying likelihood times prior. To get a
+conditional posterior for a specific parameter, one fixes all the other
+parameters and treats the expression as a p.d.f for the specific parameter.
+If one follows this strategy for the posterior of $\gamma ^{\beta }$
+conditional on all the other parameters things are greatly simplified by
+noting that $\gamma ^{\beta }$ does not enter the likelihood. In fact it
+only appears in (\ref{SSVS_prior_beta}) and (\ref{SSVS_prior_gammab}).
+Multiplying the Normal form for the former by the Bernoulli form for the
+latter yields a conditional posterior of a simple form. To be precise, the
+assumption that $\gamma _{i}^{\beta }$ is, a priori, independent of $\gamma
+_{j}^{\beta }$ for $i\neq j$ means that we can draw the SSVS variable
+selection indicators independently of one another with probabilities (for $%
+i=1,..,k$) 
+\begin{equation*}
+\Pr \left( \gamma _{i}^{\beta }=0|y,\beta ,\eta ,\psi \right) =\overline{p}%
+_{i}
+\end{equation*}%
+where 
+\begin{equation*}
+\overline{p}_{i}=\frac{\tau _{0i}^{-1}\exp \left( -\frac{\beta _{i}^{2}}{%
+2\tau _{0i}^{2}}\right) \underline{p}_{i}}{\tau _{0i}^{-1}\exp \left( -\frac{%
+\beta _{i}^{2}}{2\tau _{0i}^{2}}\right) \underline{p}_{i}+\tau
+_{1i}^{-1}\exp \left( -\frac{\beta _{i}^{2}}{2\tau _{1i}^{2}}\right) \left(
+1-\underline{p}_{i}\right) }
+\end{equation*}%
+where the denominator of this expression ensures probabilities sum to one.
+Furthermore, $\Pr \left( \gamma _{i}^{\beta }=1|y,\beta ,\eta ,\psi \right)
+=1-\overline{p}_{i}$.
+
+To obtain the conditional posterior for $\eta $, we use notation from the
+lecture slides and write the VAR\ in matrix form and let 
+\begin{equation*}
+S=\left( Y-XA\right) \left( Y-XA\right) ^{\prime }
+\end{equation*}%
+be the $n\times n$ sum of squares matrix of the VAR\ errors with upper-left $%
+j\times j$ sub-matrix being denoted by $S_{j}$ and individual elements of $S$
+being $s_{ij}$ and $s_{j}=\left( s_{1j},..,s_{j-1,j}\right) ^{\prime }$.
+Using the properties of the matric-variate Normal distribution, the
+likelihood function is proportional to%
+\begin{equation*}
+\left\vert \Psi \right\vert ^{T}\exp \left\{ tr\left( -\frac{1}{2}\Psi
+^{\prime }S\Psi \right) \right\} .
+\end{equation*}%
+Since $\Psi $ is upper-triangular we have $\left\vert \Psi \right\vert
+^{T}=\dprod\limits_{i=1}^{n}\psi _{ii}^{T}$. And, multiplying out the terms
+inside the trace operator we have%
+\begin{equation*}
+\sum_{i=1}^{n}\psi _{ii}^{2}v_{i}+\sum_{j=2}^{n}\left( \eta _{j}+\psi
+_{jj}S_{j-1}^{-1}s_{j}\right) ^{\prime }S_{j-1}\left( \eta _{j}+\psi
+_{jj}S_{j-1}^{-1}s_{j}\right) .
+\end{equation*}%
+Putting these two pieces together we obtain a likelihood proportional to%
+\begin{equation}
+\dprod\limits_{i=1}^{n}\psi _{ii}^{T}\exp \left\{ -\frac{1}{2}\left[
+\sum_{i=1}^{n}\psi _{ii}^{2}v_{i}+\sum_{j=2}^{n}\left( \eta _{j}+\psi
+_{jj}S_{j-1}^{-1}s_{j}\right) ^{\prime }S_{j-1}\left( \eta _{j}+\psi
+_{jj}S_{j-1}^{-1}s_{j}\right) \right] \right\} .  \label{VAR_like}
+\end{equation}%
+Note that the likelihood breaks into independent components for each $\eta
+_{j}$ for $j=2,..,p$ and each has a Normal form. The priors given by (\ref%
+{SSVS_prior_eta}) are also Normal and independent of one another. It is
+straightforward to multiply each Normal prior by the Normal likelihood
+component for $\eta _{j}$ to obtain for $j=2,..,p$ 
+\begin{equation*}
+\eta _{j}|y,\beta ,\psi \sim N\left( \overline{\mu }_{j},\overline{D}%
+_{j}^{\eta }\right)
+\end{equation*}%
+where%
+\begin{equation*}
+\overline{D}_{j}^{\eta }=\left[ S_{j-1}+\left( \underline{D}_{j}^{\eta
+}\right) ^{-1}\right] ^{-1}
+\end{equation*}%
+\begin{equation*}
+\overline{\mu }_{j}=-\psi _{jj}\overline{D}_{j}^{\eta }s_{j}.
+\end{equation*}
+
+To obtain the posterior conditionals for $\gamma ^{\eta }$ we follow the
+same strategy (and almost identical derivations)\ as for $\gamma ^{\beta }$
+and find (for $j=2,..,n$ and $i=1..,j-1$)%
+\begin{equation*}
+\Pr \left( \gamma _{ij}^{\eta }=0|y,\beta ,\eta ,\psi \right) =\overline{q}%
+_{ij}
+\end{equation*}%
+where 
+\begin{equation*}
+\overline{q}_{ij}=\frac{\kappa _{0ij}^{-1}\exp \left( -\frac{\psi _{ij}^{2}}{%
+2\kappa _{0ij}^{2}}\right) \underline{q}_{ij}}{\kappa _{0ij}^{-1}\exp \left(
+-\frac{\psi _{ij}^{2}}{2\kappa _{0ij}^{2}}\right) \underline{q}_{i}+\kappa
+_{1ij}^{-1}\exp \left( -\frac{\psi _{ij}^{2}}{2\kappa _{1ij}^{2}}\right)
+\left( 1-\underline{q}_{ij}\right) }
+\end{equation*}%
+where the denominator of this expression ensures probabilities sum to one.
+Furthermore, $\Pr \left( \gamma _{ij}^{\eta }=1|y,\beta ,\eta ,\psi \right)
+=1-\overline{q}_{ij}$.
+
+Finally, to obtain draws of $\psi $, this can be done by using the
+independent Gamma conditional posteriors for $\psi _{jj}^{2}$ for $j=1,..,n$
+which are:%
+\begin{equation*}
+\psi _{ii}^{2}|y,\beta ,\gamma ^{\beta }\sim G\left( \overline{a}_{i},%
+\overline{b}_{i}\right)
+\end{equation*}%
+where 
+\begin{eqnarray*}
+\overline{a}_{i} &=&\underline{a}_{i}+\frac{1}{2} \\
+\overline{b}_{1} &=&\underline{b}_{1}+\frac{s_{11}}{2} \\
+\overline{b}_{j} &=&\underline{b}_{j}+\frac{1}{2}\left\{
+s_{jj}+s_{j}^{\prime }\left[ S_{j-1}+\left( \underline{D}_{j}^{\eta }\right)
+^{-1}\right] ^{-1}s_{j}\right\} \text{ for }j=2,..,n.
+\end{eqnarray*}
+
+The proof is standard since it involves multiplying the Gamma prior (\ref%
+{SSVS_prior_psi}) by the Normal likelihood in (\ref{VAR_like}) and
+collecting terms involving $\psi _{ii}^{2}$.
+
+(b) Matlab code (named VAR\_SSVS.m) which answers this question is available
+on this book's website. The results below set $p=1$ and include an
+intercept. Prior hyperparameters are set as $\underline{q}_{ij}=\underline{p}%
+_{i}=\frac{1}{2},$ $\tau _{0i}=\kappa _{0ij}=0.01$, $\tau _{1i}=\kappa
+_{1ij}=100$ $\ \underline{a}_{i}=\underline{b}_{i}=0.01$ for all $i$ and $j$
+(although you may wish to experiment with other prior hyperparameter values).
+
+The following table, based on 22,000 draws of which the first 2,000 were
+discarded as the burn-in, presents posterior means, standard deviations and
+the posterior inclusion probability (i.e. $\Pr \left( \gamma _{i}^{\beta
+}=1|y\right) $ for each $i=1,..,K$). It can be seen that posterior inclusion
+probabilities are very high for the first own lags in each of the three
+equations and their coefficients are similar to the comparable Minnesota
+prior results in Table 1. However, relative to Table 1, the remainder of the
+coefficients have been shrunk towards zero.
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\multicolumn{4}{|l|}{Table 1:\ Posterior Results for VAR\ Coefficients using
+VAR-SSVS} \\ \hline
+& Mean & St. Deviation & Inclusion Probability \\ \hline
+& \multicolumn{3}{|l|}{Inflation Equation} \\ \hline
+Lag inflation & $0.793$ & $0.049$ & $1.000$ \\ \hline
+Lag unemployment & $0.010$ & $0.007$ & $3\times 10^{-4}$ \\ \hline
+Lag interest rate & $0.020$ & $0.009$ & $0.015$ \\ \hline
+& \multicolumn{3}{|l|}{Unemployment Equation} \\ \hline
+Lag inflation & $0.093$ & $0.074$ & $0.595$ \\ \hline
+Lag unemployment & $0.969$ & $0.007$ & $1.000$ \\ \hline
+Lag interest rate & $0.014$ & $0.010$ & $0.003$ \\ \hline
+& \multicolumn{3}{|l|}{Interest Rate Equation} \\ \hline
+Lag inflation & $0.139$ & $0.207$ & $0.329$ \\ \hline
+Lag unemployment & $0.003$ & $0.009$ & $1\times 10^{-4}$ \\ \hline
+Lag interest rate & $0.965$ & $0.035$ & $1.000$ \\ \hline
+\end{tabular}
+\end{center}
+
+Table 2 is of the same format as Table 1, except it contains posterior
+results for $\Sigma .$ The SSVS algorithm does not apply to the error
+variances, only the covariances which is why there are no inclusion
+probabilities to be reported for the former. It can be seen that there is
+one covariance, $\Sigma _{21}$, that is being shrunk to zero. The VAR-SSVS
+is providing strong evidence that $\Sigma _{31}$ and $\Sigma _{32}$ are
+non-zero indicating that the error in the interest rate equation is
+correlated with the errors of the other two equations.
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\multicolumn{4}{|l|}{Table 2:\ Posterior Results for $\Sigma $ using VAR-SSVS
+} \\ \hline
+& Mean & St. Deviation & Inclusion Probability \\ \hline
+$\Sigma _{11}$ & $0.177$ & $0.018$ & n.a. \\ \hline
+$\Sigma _{21}$ & $-0.001$ & $0.005$ & $0.053$ \\ \hline
+$\Sigma _{31}$ & $0.112$ & $0.028$ & $1.000$ \\ \hline
+$\Sigma _{22}$ & $0.089$ & $0.009$ & n.a. \\ \hline
+$\Sigma _{32}$ & $-0.142$ & $0.023$ & $1.000$ \\ \hline
+$\Sigma _{33}$ & $0.910$ & $0.090$ & n.a. \\ \hline
+\end{tabular}
+
+\newpage 
+\end{center}
+
+\textbf{Exercise 2 (Dirichlet Laplace Hierarchical Priors in VARs)}
+
+The Dirichlet Laplace hierarchical prior was covered in the lecture and I\
+will not provide more details of the statistical theory underlying it. If
+you want to learn more about the theory, the following paper is an excellent
+source:
+
+Bhattacharya, A., Pati, D., Pillai, N. S., \& Dunson, D. B. (2015).
+Dirichlet--Laplace priors for optimal shrinkage. Journal of the American
+Statistical Association, 110(512), 1479-1490.
+
+If you want to see a good empirical application which uses this approach in
+VARs, then the following paper is a good one:
+
+Kastner, G. and Huber, F. (2017). Sparse Bayesian vector autoregressions in
+huge dimensions available at https://arxiv.org/abs/1704.03239
+
+I provide code (BVAR\_DL.m) which estimates this model on a small data set
+for you to experiment with. 
+
+\bigskip
+
+\end{document}
