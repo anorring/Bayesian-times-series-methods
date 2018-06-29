@@ -7,6 +7,8 @@
 %from that used in the book
 %This code does not allow for regression effects (i.e. no X)
 %There are also some things set up for univariate case, alterations required for multivariate
+%
+%applies the Kalman filter to all t
 
 function nt = djs(yt,Zt,Gtt,Tt,Ht,Ft,sig);
 

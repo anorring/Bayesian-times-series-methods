@@ -1,4 +1,7 @@
 %program which does empirical illustration for the TVP-AR model
+clear all
+close all
+clc
 
 load dliprod.dat;
 t=size(dliprod,1);
@@ -9,7 +12,7 @@ xar=ones(t-p,p+1);
 for i=1:p
     xar(:,i+1) = dliprod(p+1-i:t-i,1);
 end
-t=t-p;
+t=t-p;  % drop the observations from the beginning because of autocorrelation
 %k=total number of time varying parameters
 k=p+1;
 
@@ -53,6 +56,9 @@ lamdraw=zeros(k,1);
 
 for irep = 1:s
     irep
+    
+    % Gibbs step 1
+    
     %draw states conditional on other parameters
     sig2draw=1/hdraw;
 
@@ -62,6 +68,8 @@ for irep = 1:s
       adraw(i,:)=adraw(i-1,:)+ ndraw(i,:);
     end
      
+    % Gibbs step 2
+    
     %draw from h conditional on states
     sse=0;
     for i=1:t
@@ -69,6 +77,8 @@ for irep = 1:s
     end
     s12 = (sse+v0*s02)/v1;
     hdraw=gamm_rnd(1,1,.5*v1,.5*v1*s12);
+    
+    % Gibbs step 3
     
     %draw from lambda conditional on rest
     sselam=(adraw(1,:)').^2;
