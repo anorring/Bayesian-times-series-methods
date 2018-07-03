@@ -81,7 +81,8 @@ VB_OLS = eye(m);
 h_OLS = ones(m,1);
 sigma_OLS = 1;
 
-% Set some hyperparameters here (see page 831, end of section 4.1)
+% Set some hyperparameters here (see page 831, end of section 4.1) - FOR
+% PLAYING around with the code: change to e.g. 0.0001
 k_Q = 0.001;
 k_W = 0.001;
 
